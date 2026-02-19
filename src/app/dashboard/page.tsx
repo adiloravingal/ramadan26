@@ -40,7 +40,15 @@ const router = useRouter()
   if (authLoading || loading) return <LoadingScreen />
 
   if ((needsLocation || forceLocationSetup) && userId) {
-  return <LocationSetup userId={userId} onComplete={onLocationSet} />
+  return (
+    <LocationSetup
+      userId={userId}
+      onComplete={(settings) => {
+        setForceLocationSetup(false)
+        onLocationSet(settings)
+      }}
+    />
+  )
 }
 
   return (

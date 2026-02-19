@@ -119,39 +119,42 @@ export function useRamadanData(userId: string | null) {
   }, [syncStatuses])
 
   const onLocationSet = useCallback(async (newSettings: UserSettings) => {
-  // Clear old prayer times for new location
-  if (userId) {
-    await supabase.from('user_prayer_times').delete().eq('user_id', userId)
+  // Set these synchronously first — never call fetchData after this
+  setNeedsLocation(false)
+  setSettings(newSettings)
+  setLoading(true)
+
+  if (!userId || !configRef.current) {
+    setLoading(false)
+    return
   }
 
-  // Directly set the new settings in state — don't re-fetch from DB
-  // because the upsert in LocationSetup may not be committed yet
-  setSettings(newSettings)
-  setNeedsLocation(false)
-  configRef.current = config  // keep existing config
-
-  // Now fetch prayer times using the new settings directly
-  if (!config || !userId) return
-  setLoading(true)
   try {
+    // Fetch prayer times directly with the new settings
     const times = await fetchAndStorePrayerTimes(
       userId,
       newSettings,
-      config.start_date,
-      config.total_days
+      configRef.current.start_date,
+      configRef.current.total_days
     )
     prayerTimesRef.current = times
     setPrayerTimes(times)
-    setRecords(prev => {
-      syncStatuses(prev)
-      return prev
-    })
+
+    // Fetch records fresh
+    const { data: recs } = await supabase
+      .from('day_records')
+      .select('*')
+      .eq('user_id', userId)
+
+    const freshRecs = (recs || []) as DayRecord[]
+    setRecords(freshRecs)
+    syncStatuses(freshRecs)
   } catch (e) {
     console.error('onLocationSet error:', e)
   } finally {
     setLoading(false)
   }
-}, [userId, config, syncStatuses])
+}, [userId, syncStatuses])
 
   const togglePrayer = useCallback(async (
     dayNumber: number,
