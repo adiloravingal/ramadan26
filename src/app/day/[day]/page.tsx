@@ -104,13 +104,9 @@ const router = useRouter()
 
         .section-lbl { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(196,155,74,0.4); margin-bottom: 12px; }
 
-        .prayer-row { display: flex; align-items: center; padding: 16px; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); background: var(--bg-card); transition: all 0.25s cubic-bezier(0.16,1,0.3,1); cursor: pointer; opacity: 0; transform: translateX(-12px); user-select: none; }
-        .prayer-row.show { opacity: 1; transform: translateX(0); }
-        .prayer-row:hover { border-color: rgba(196,155,74,0.2); background: rgba(196,155,74,0.04); }
-        .prayer-row.is-done { background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.15); }
-        .prayer-row.is-missed { background: rgba(248,113,113,0.05); border-color: rgba(248,113,113,0.12); }
-        .prayer-row.just-toggled { animation: popRow 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-        .future-locked { opacity: 0.4; pointer-events: none; cursor: default; }
+        .prayer-row { ... background:var(--bg-card); border:1px solid var(--border); box-shadow:var(--shadow-card); ... }
+.prayer-row.is-done { background:#F0FBF6; border-color:#A8DFC4; }
+.prayer-row.is-missed { background:#FEF4F4; border-color:#F5C0C0; }
 
         @keyframes popRow { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
 

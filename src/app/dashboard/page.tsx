@@ -92,10 +92,10 @@ const router = useRouter()
 
         /* PRAYER TOGGLES */
         .today-prayers { margin-top:14px; display:flex; flex-direction:column; gap:7px; }
-        .tp-row { display:flex; align-items:center; padding:13px 14px; border-radius:14px; border:1px solid var(--border); background:var(--bg-card); transition:all 0.2s; cursor:pointer; user-select:none; position:relative; overflow:hidden; }
-        .tp-row:hover { border-color:var(--border-gold); background:var(--bg-card-hover); }
-        .tp-row.done { background:rgba(52,211,153,0.07); border-color:rgba(52,211,153,0.18); }
-        .tp-row.missed { background:rgba(248,113,113,0.06); border-color:rgba(248,113,113,0.15); }
+        .tp-row { display:flex; align-items:center; padding:13px 14px; border-radius:14px; border:1px solid var(--border); background:var(--bg-card); box-shadow:var(--shadow-card); transition:all 0.2s; cursor:pointer; user-select:none; position:relative; overflow:hidden; }
+.tp-row:hover { border-color:var(--border-gold); background:var(--bg-card-hover); }
+.tp-row.done { background:#F0FBF6; border-color:#A8DFC4; box-shadow:0 1px 3px rgba(52,211,153,0.1); }
+.tp-row.missed { background:#FEF4F4; border-color:#F5C0C0; box-shadow:0 1px 3px rgba(248,113,113,0.1); }
         .tp-celebrate { position:absolute; inset:0; background:radial-gradient(circle at center,rgba(52,211,153,0.25),transparent 70%); animation:celebPulse 0.7s ease-out forwards; pointer-events:none; }
         @keyframes celebPulse { 0%{opacity:1;transform:scale(0.8);}100%{opacity:0;transform:scale(1.5);} }
         .tp-icon { font-size:16px; width:28px; text-align:center; flex-shrink:0; }
@@ -113,8 +113,7 @@ const router = useRouter()
 
         /* QAZA */
         .qaza-wrap { display:flex; flex-direction:column; gap:8px; }
-        .all-clear { display:flex; align-items:center; gap:8px; padding:14px 18px; background:rgba(52,211,153,0.07); border:1px solid rgba(52,211,153,0.15); border-radius:16px; font-size:13px; color:#34d399; }
-        .qaza-item { border-radius:16px; border:1px solid rgba(248,113,113,0.15); background:rgba(248,113,113,0.04); overflow:hidden; }
+.all-clear { display:flex; align-items:center; gap:8px; padding:14px 18px; background:#F0FBF6; border:1px solid #A8DFC4; border-radius:16px; font-size:13px; color:#1A7A4A; box-shadow:var(--shadow-card); }        .qaza-item { border-radius:16px; border:1px solid #F5C0C0; background:#FEF4F4; overflow:hidden; box-shadow:var(--shadow-card); }
         .qaza-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; transition:background 0.2s; }
         .qaza-header:hover { background:rgba(248,113,113,0.04); }
         .qaza-header-left { display:flex; align-items:center; gap:10px; }
@@ -150,8 +149,8 @@ const router = useRouter()
         .dp-datestr { font-size:11px; color:var(--text-muted); }
         .dp-status { display:flex; gap:4px; }
         .dp-dot { width:6px; height:6px; border-radius:50%; }
-        .dp-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; background:var(--bg-card); border:1px solid var(--border-gold); border-radius:14px; color:var(--text-gold-dim); font-size:12px; font-family:'Lato',sans-serif; letter-spacing:0.1em; cursor:pointer; transition:all 0.2s; margin-top:8px; }
-        .dp-btn:hover { background:var(--bg-card-hover); color:var(--text-gold); }
+        .dp-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; background:var(--bg-card); border:1px solid var(--border-gold); border-radius:14px; color:var(--text-gold); font-size:12px; font-family:'Lato',sans-serif; letter-spacing:0.1em; cursor:pointer; transition:all 0.2s; margin-top:8px; box-shadow:var(--shadow-card); }
+.dp-btn:hover { background:var(--bg-card-hover); border-color:var(--text-gold); }
       `}</style>
 
       <div className="db">
