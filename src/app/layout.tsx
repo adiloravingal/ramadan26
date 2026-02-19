@@ -22,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ramadan" />
+        <script defer src="https://cloud.umami.is/script.js" data-website-id="ba5c25a6-18a9-4ac7-b25e-35083592967e"></script>
       </head>
       <body>
         {children}
