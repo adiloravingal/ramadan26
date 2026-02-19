@@ -3,7 +3,6 @@ import { DayRecord, DayStatus, Prayer, PrayerTime, QazaSummary } from '@/types'
 const PRAYERS: Prayer[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
 
 function toLocalDateStr(date: Date): string {
-  // Use local date, not UTC — critical for IST (UTC+5:30)
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
@@ -11,7 +10,10 @@ function toLocalDateStr(date: Date): string {
 }
 
 export function toDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`)
+  // Parse as local time explicitly
+  const [year, month, day] = date.split('-').map(Number)
+  const [hour, minute] = time.split(':').map(Number)
+  return new Date(year, month - 1, day, hour, minute, 0)
 }
 
 export function computeDayStatus(
@@ -59,7 +61,7 @@ export function buildDayStatus(
   record: DayRecord | null,
   now: Date = new Date()
 ): DayStatus {
-  const todayStr = toLocalDateStr(now)   // ← fixed: local date not UTC
+  const todayStr = toLocalDateStr(now)
   const isToday = prayerTime.date === todayStr
   const isPast = prayerTime.date < todayStr
   const isFuture = prayerTime.date > todayStr
@@ -88,6 +90,9 @@ export function computeQaza(dayStatuses: DayStatus[]): QazaSummary {
   }
 
   for (const day of dayStatuses) {
+    // Count missed for past AND today — not future
+    if (day.isFuture) continue
+
     for (const prayer of PRAYERS) {
       if (day.prayers[prayer] === 'missed') {
         summary[prayer]++
