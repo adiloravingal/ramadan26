@@ -253,8 +253,11 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div>
+      <Link href="razorpay.me/@adiloravingal">Donate</Link>
+    </div>
             <ThemeToggle />
-            <a href="razorpay.me/@adiloravingal"/> Donate 
+
             <button
               className="hdr-out"
               title={
