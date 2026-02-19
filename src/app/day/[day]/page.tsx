@@ -22,8 +22,8 @@ export default function DayPage() {
   const params = useParams()
   const dayNumber = parseInt(params.day as string)
   const { userId, authLoading } = useAuth()
-  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
-  const router = useRouter()
+const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer, settings } = useRamadanData(userId)  
+const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [justToggled, setJustToggled] = useState<string | null>(null)
 

@@ -9,8 +9,8 @@ import Link from 'next/link'
 
 export default function DashboardPage() {
   const { userId, userName, authLoading, signOut } = useAuth()
-  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
-  const router = useRouter()
+const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer, settings } = useRamadanData(userId) 
+ const router = useRouter()
 
   useEffect(() => {
     if (!authLoading && !userId) router.push('/login')

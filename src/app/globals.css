@@ -66,3 +66,24 @@ body { margin: 0; padding: 0; }
   --shadow-card: 0 20px 60px rgba(0,0,0,0.1);
   --shadow-btn: 0 4px 20px rgba(196,155,74,0.25);
 }
+
+html, body {
+  background-color: #070c1a;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+/* Prevent white overscroll on iOS/Android pull */
+:root {
+  background-color: #070c1a;
+}
+
+:root[data-theme="light"] {
+  background-color: #F5F0E6;
+}
+
+:root[data-theme="light"] html,
+:root[data-theme="light"] body {
+  background-color: #F5F0E6;
+}

@@ -15,8 +15,8 @@ type PrayerKey = typeof PRAYERS[number] | 'fast'
 
 export default function DashboardPage() {
   const { userId, userName, authLoading, signOut } = useAuth()
-  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
-  const router = useRouter()
+const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer, settings } = useRamadanData(userId) 
+const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [expandedQaza, setExpandedQaza] = useState<PrayerKey | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
@@ -162,7 +162,7 @@ export default function DashboardPage() {
             <ThemeToggle />
             <button
   className="hdr-out"
-  title="Change location"
+  title={settings?.city_name ? `Location: ${settings.city_name}` : 'Set location'}
   onClick={async () => {
     if (!userId) return
     const supabase = createClient()
@@ -173,7 +173,7 @@ export default function DashboardPage() {
     setForceLocationSetup(true)
   }}
 >
-  📍
+  📍 {settings?.city_name ?? ''}
 </button>
             <button className="hdr-out" onClick={signOut}>Sign out</button>
           </div>

@@ -16,16 +16,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ramadan" />
-        {/* Init theme before paint — prevents flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
             var t = localStorage.getItem('theme') ||
               (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
             document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.style.backgroundColor = t === 'light' ? '#F5F0E6' : '#070c1a';
+            document.body && (document.body.style.backgroundColor = t === 'light' ? '#F5F0E6' : '#070c1a');
           })();
         `}} />
       </head>
-      <body>
+      <body style={{ backgroundColor: '#070c1a', margin: 0 }}>
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {

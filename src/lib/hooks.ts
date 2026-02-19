@@ -119,15 +119,39 @@ export function useRamadanData(userId: string | null) {
   }, [syncStatuses])
 
   const onLocationSet = useCallback(async (newSettings: UserSettings) => {
-    setNeedsLocation(false)
-    setSettings(newSettings)
-    setLoading(true)
-
-    // Clear old cached prayer times and refetch for new location
+  // Clear old prayer times for new location
+  if (userId) {
     await supabase.from('user_prayer_times').delete().eq('user_id', userId)
+  }
 
-    await fetchData()
-  }, [userId, fetchData])
+  // Directly set the new settings in state — don't re-fetch from DB
+  // because the upsert in LocationSetup may not be committed yet
+  setSettings(newSettings)
+  setNeedsLocation(false)
+  configRef.current = config  // keep existing config
+
+  // Now fetch prayer times using the new settings directly
+  if (!config || !userId) return
+  setLoading(true)
+  try {
+    const times = await fetchAndStorePrayerTimes(
+      userId,
+      newSettings,
+      config.start_date,
+      config.total_days
+    )
+    prayerTimesRef.current = times
+    setPrayerTimes(times)
+    setRecords(prev => {
+      syncStatuses(prev)
+      return prev
+    })
+  } catch (e) {
+    console.error('onLocationSet error:', e)
+  } finally {
+    setLoading(false)
+  }
+}, [userId, config, syncStatuses])
 
   const togglePrayer = useCallback(async (
     dayNumber: number,
