@@ -22,7 +22,7 @@ export default function DayPage() {
   const params = useParams()
   const dayNumber = parseInt(params.day as string)
   const { userId, authLoading } = useAuth()
-  const { dayStatuses, loading, togglePrayer } = useRamadanData(userId)
+  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [justToggled, setJustToggled] = useState<string | null>(null)
@@ -38,11 +38,12 @@ export default function DayPage() {
   const day = dayStatuses.find(d => d.dayNumber === dayNumber)
 
   const handleToggle = async (key: Prayer | 'fast', currentDone: boolean) => {
-    if (!day) return
-    setJustToggled(key)
-    await togglePrayer(day.dayNumber, day.date, key, currentDone)
-    setTimeout(() => setJustToggled(null), 600)
-  }
+  if (!day) return
+  if (day.isFuture) return  // ← block future days
+  setJustToggled(key)
+  await togglePrayer(day.dayNumber, day.date, key, currentDone)
+  setTimeout(() => setJustToggled(null), 600)
+}
 
   if (authLoading || loading) return (
     <div style={{ minHeight: '100vh', background: '#070c1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -52,7 +53,7 @@ export default function DayPage() {
 
   if (!day) return (
     <div style={{ minHeight: '100vh', background: '#070c1a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-      <p style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'sans-serif' }}>Day not found</p>
+      <p style={{ color: 'var(--text-secondary)', fontFamily: 'sans-serif' }}>Day not found</p>
       <Link href="/dashboard" style={{ color: '#c49b4a', fontSize: 13 }}>← Back</Link>
     </div>
   )
@@ -78,13 +79,13 @@ export default function DayPage() {
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Lato:wght@300;400&display=swap');
         * { box-sizing: border-box; }
 
-        .day-root { min-height: 100vh; background: #070c1a; font-family: 'Lato', sans-serif; color: #f0e6cc; padding-bottom: 60px; }
+        .day-root { min-height: 100vh; background: var(--bg-root); font-family: 'Lato', sans-serif; color: var(--text-primary); padding-bottom: 60px; }
 
         .day-header { display: flex; align-items: center; padding: 20px 20px 16px; border-bottom: 1px solid rgba(196,155,74,0.1); background: rgba(7,12,26,0.95); backdrop-filter: blur(20px); position: sticky; top: 0; z-index: 50; gap: 14px; }
-        .back-btn { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: center; color: rgba(196,155,74,0.7); text-decoration: none; font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
-        .back-btn:hover { background: rgba(196,155,74,0.1); color: #e8c97a; }
+        .back-btn { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-input); border: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: center; color: rgba(196,155,74,0.7); text-decoration: none; font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
+        .back-btn:hover { background: rgba(196,155,74,0.1); color: var(--text-gold); }
         .day-header-info { flex: 1; }
-        .day-header-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: #f0e6cc; letter-spacing: 0.02em; }
+        .day-header-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: var(--text-primary); letter-spacing: 0.02em; }
         .day-header-sub { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 1px; letter-spacing: 0.05em; }
         .today-tag { font-size: 10px; letter-spacing: 0.12em; color: #c49b4a; background: rgba(196,155,74,0.1); border: 1px solid rgba(196,155,74,0.2); padding: 4px 10px; border-radius: 20px; text-transform: uppercase; }
 
@@ -97,35 +98,37 @@ export default function DayPage() {
         .ring-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
         .ring-fill { fill: none; stroke: url(#ringGrad); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 314; stroke-dashoffset: 314; transition: stroke-dashoffset 1.2s cubic-bezier(0.16,1,0.3,1) 0.3s; }
         .ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .ring-count { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: #f0e6cc; line-height: 1; }
-        .ring-total { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .ring-count { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--text-primary); line-height: 1; }
+        .ring-total { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
         .hero-date { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; color: rgba(240,230,204,0.4); letter-spacing: 0.03em; }
 
         .section-lbl { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(196,155,74,0.4); margin-bottom: 12px; }
 
-        .prayer-row { display: flex; align-items: center; padding: 16px; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); transition: all 0.25s cubic-bezier(0.16,1,0.3,1); cursor: pointer; opacity: 0; transform: translateX(-12px); user-select: none; }
+        .prayer-row { display: flex; align-items: center; padding: 16px; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); background: var(--bg-card); transition: all 0.25s cubic-bezier(0.16,1,0.3,1); cursor: pointer; opacity: 0; transform: translateX(-12px); user-select: none; }
         .prayer-row.show { opacity: 1; transform: translateX(0); }
         .prayer-row:hover { border-color: rgba(196,155,74,0.2); background: rgba(196,155,74,0.04); }
         .prayer-row.is-done { background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.15); }
         .prayer-row.is-missed { background: rgba(248,113,113,0.05); border-color: rgba(248,113,113,0.12); }
         .prayer-row.just-toggled { animation: popRow 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+        .future-locked { opacity: 0.4; pointer-events: none; cursor: default; }
+
         @keyframes popRow { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
 
         .prayer-icon { font-size: 20px; width: 36px; text-align: center; flex-shrink: 0; }
         .prayer-info { flex: 1; padding: 0 12px; }
-        .prayer-name { font-size: 14px; font-weight: 400; color: #f0e6cc; display: flex; align-items: center; gap: 8px; }
+        .prayer-name { font-size: 14px; font-weight: 400; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
         .prayer-arabic { font-size: 13px; color: rgba(196,155,74,0.4); font-family: serif; }
         .prayer-meta { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 3px; letter-spacing: 0.03em; }
         .qaza-tag { color: #f87171; margin-left: 6px; }
 
         .toggle { width: 48px; height: 26px; border-radius: 13px; position: relative; transition: background 0.3s; flex-shrink: 0; border: none; cursor: pointer; }
-        .toggle.off { background: rgba(255,255,255,0.08); }
+        .toggle.off { background: var(--border-input); }
         .toggle.on { background: linear-gradient(135deg, #34d399, #10b981); box-shadow: 0 0 12px rgba(52,211,153,0.4); }
         .toggle-knob { position: absolute; top: 3px; width: 20px; height: 20px; background: white; border-radius: 50%; transition: left 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
         .toggle.off .toggle-knob { left: 3px; }
         .toggle.on .toggle-knob { left: 25px; }
 
-        .fast-card { background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; opacity: 0; transform: translateY(12px); transition: opacity 0.6s 0.6s, transform 0.6s cubic-bezier(0.16,1,0.3,1) 0.6s, background 0.25s, border-color 0.25s; }
+        .fast-card { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; opacity: 0; transform: translateY(12px); transition: opacity 0.6s 0.6s, transform 0.6s cubic-bezier(0.16,1,0.3,1) 0.6s, background 0.25s, border-color 0.25s; }
         .fast-card.show { opacity: 1; transform: translateY(0); }
         .fast-card:hover { border-color: rgba(196,155,74,0.2); }
         .fast-card.is-done { background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.15); }
@@ -133,7 +136,7 @@ export default function DayPage() {
         .fast-card.just-toggled { animation: popRow 0.4s cubic-bezier(0.34,1.56,0.64,1); }
         .fast-left { display: flex; align-items: center; gap: 12px; }
         .fast-icon { font-size: 22px; }
-        .fast-label { font-size: 15px; font-weight: 400; color: #f0e6cc; display: flex; align-items: center; gap: 8px; }
+        .fast-label { font-size: 15px; font-weight: 400; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
         .fast-arabic { font-size: 14px; color: rgba(196,155,74,0.4); font-family: serif; }
         .fast-sublabel { font-size: 11px; color: rgba(255,255,255,0.25); margin-top: 3px; }
 
@@ -182,8 +185,7 @@ export default function DayPage() {
               return (
                 <div
                   key={prayer.key}
-                  className={`prayer-row ${isDone ? 'is-done' : isMissed ? 'is-missed' : ''} ${mounted ? 'show' : ''} ${justToggled === prayer.key ? 'just-toggled' : ''}`}
-                  style={{ transitionDelay: mounted ? `${0.1 + i * 0.07}s` : '0s' }}
+className={`tp-row ${isDone ? 'done' : isMissed ? 'missed' : ''} ${day.isFuture ? 'future-locked' : ''} ...`}                  style={{ transitionDelay: mounted ? `${0.1 + i * 0.07}s` : '0s' }}
                   onClick={() => handleToggle(prayer.key, isDone)}
                 >
                   <div className="prayer-icon">{PRAYER_ICONS[prayer.time]}</div>
@@ -225,8 +227,14 @@ export default function DayPage() {
             </button>
           </div>
 
-          {day.isPast && <div className="edit-note">You can update this day's record anytime</div>}
-        </main>
+{day.isPast && (
+  <div className="edit-note">You can update this day's record anytime</div>
+)}
+{day.isFuture && (
+  <div className="edit-note" style={{ color: 'rgba(196,155,74,0.4)' }}>
+    This day hasn't arrived yet
+  </div>
+)}        </main>
       </div>
     </>
   )

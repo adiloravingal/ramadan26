@@ -3,7 +3,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { buildDayStatus, computeQaza } from '@/lib/prayerUtils'
-import { DayRecord, DayStatus, PrayerTime, QazaSummary, RamadanConfig } from '@/types'
+import { DayRecord, DayStatus, PrayerTime, QazaSummary, RamadanConfig, UserSettings } from '@/types'
+import { fetchAndStorePrayerTimes, getUserPrayerTimes } from '@/lib/prayerApi'
+
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 function recomputeStatuses(
   times: PrayerTime[],
@@ -23,18 +31,22 @@ export function useRamadanData(userId: string | null) {
   const [records, setRecords] = useState<DayRecord[]>([])
   const [dayStatuses, setDayStatuses] = useState<DayStatus[]>([])
   const [qaza, setQaza] = useState<QazaSummary | null>(null)
+  const [settings, setSettings] = useState<UserSettings | null>(null)
+  const [needsLocation, setNeedsLocation] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   const configRef = useRef<RamadanConfig | null>(null)
   const prayerTimesRef = useRef<PrayerTime[]>([])
 
   const supabase = createClient()
 
-  // Whenever records change, recompute statuses + qaza immediately
   const syncStatuses = useCallback((newRecords: DayRecord[]) => {
     if (!configRef.current || prayerTimesRef.current.length === 0) return
-    const statuses = recomputeStatuses(prayerTimesRef.current, newRecords, configRef.current.total_days)
+    const statuses = recomputeStatuses(
+      prayerTimesRef.current,
+      newRecords,
+      configRef.current.total_days
+    )
     setDayStatuses(statuses)
     setQaza(computeQaza(statuses))
   }, [])
@@ -44,29 +56,48 @@ export function useRamadanData(userId: string | null) {
     try {
       setLoading(true)
 
-      const [configRes, timesRes, recordsRes] = await Promise.all([
+      const [configRes, settingsRes, recordsRes] = await Promise.all([
         supabase.from('ramadan_config').select('*').single(),
-        supabase.from('prayer_times').select('*').order('day_number'),
+        supabase.from('user_settings').select('*').eq('id', userId).single(),
         supabase.from('day_records').select('*').eq('user_id', userId),
       ])
 
-      if (configRes.error) throw configRes.error
-      if (timesRes.error) throw timesRes.error
-      if (recordsRes.error) throw recordsRes.error
-
       const cfg = configRes.data as RamadanConfig
-      const times = timesRes.data as PrayerTime[]
-      const recs = recordsRes.data as DayRecord[]
+      const userSettings = settingsRes.data as UserSettings | null
+      const recs = (recordsRes.data || []) as DayRecord[]
 
       configRef.current = cfg
-      prayerTimesRef.current = times
-
       setConfig(cfg)
-      setPrayerTimes(times)
       setRecords(recs)
+
+      // Check if user has set a real location yet
+      // Chennai coords are the default — treat as "needs setup" only if no settings row
+      if (!userSettings) {
+        setNeedsLocation(true)
+        setLoading(false)
+        return
+      }
+
+      setSettings(userSettings)
+
+      // Check if we have prayer times cached, if not fetch from API
+      let times = await getUserPrayerTimes(userId)
+
+      if (times.length < cfg.total_days) {
+        // Fetch missing days from Aladhan API
+        times = await fetchAndStorePrayerTimes(
+          userId,
+          userSettings,
+          cfg.start_date,
+          cfg.total_days
+        )
+      }
+
+      prayerTimesRef.current = times
+      setPrayerTimes(times)
       syncStatuses(recs)
     } catch (e: any) {
-      setError(e.message)
+      console.error('fetchData error:', e)
     } finally {
       setLoading(false)
     }
@@ -76,7 +107,7 @@ export function useRamadanData(userId: string | null) {
     fetchData()
   }, [fetchData])
 
-  // Refresh every 60s to catch newly-missed prayers automatically
+  // Refresh every 60s for auto-miss detection
   useEffect(() => {
     const interval = setInterval(() => {
       setRecords(prev => {
@@ -87,6 +118,17 @@ export function useRamadanData(userId: string | null) {
     return () => clearInterval(interval)
   }, [syncStatuses])
 
+  const onLocationSet = useCallback(async (newSettings: UserSettings) => {
+    setNeedsLocation(false)
+    setSettings(newSettings)
+    setLoading(true)
+
+    // Clear old cached prayer times and refetch for new location
+    await supabase.from('user_prayer_times').delete().eq('user_id', userId)
+
+    await fetchData()
+  }, [userId, fetchData])
+
   const togglePrayer = useCallback(async (
     dayNumber: number,
     date: string,
@@ -96,13 +138,14 @@ export function useRamadanData(userId: string | null) {
     if (!userId) return
     const newValue = !currentValue
 
-    // Optimistic update — immediately update records and recompute
     setRecords(prev => {
       const existing = prev.find(r => r.day_number === dayNumber)
       let next: DayRecord[]
       if (existing) {
         next = prev.map(r =>
-          r.day_number === dayNumber ? { ...r, [field]: newValue, updated_at: new Date().toISOString() } : r
+          r.day_number === dayNumber
+            ? { ...r, [field]: newValue, updated_at: new Date().toISOString() }
+            : r
         )
       } else {
         const newRecord: DayRecord = {
@@ -110,18 +153,17 @@ export function useRamadanData(userId: string | null) {
           user_id: userId,
           day_number: dayNumber,
           date,
-          fajr: false, dhuhr: false, asr: false, maghrib: false, isha: false, fast: false,
+          fajr: false, dhuhr: false, asr: false,
+          maghrib: false, isha: false, fast: false,
           [field]: newValue,
           updated_at: new Date().toISOString(),
         }
         next = [...prev, newRecord]
       }
-      // Recompute synchronously inside the setter so UI updates in same render
       syncStatuses(next)
       return next
     })
 
-    // Persist to Supabase in background
     const { error } = await supabase.from('day_records').upsert({
       user_id: userId,
       day_number: dayNumber,
@@ -129,22 +171,23 @@ export function useRamadanData(userId: string | null) {
       [field]: newValue,
     }, { onConflict: 'user_id,day_number' })
 
-    if (error) {
-      // Revert on failure
-      fetchData()
-    }
+    if (error) fetchData()
   }, [userId, syncStatuses, fetchData])
 
-  return { config, prayerTimes, dayStatuses, qaza, loading, error, refresh: fetchData, togglePrayer }
+  return {
+    config, prayerTimes, dayStatuses, qaza,
+    loading, settings, needsLocation,
+    onLocationSet, refresh: fetchData, togglePrayer
+  }
 }
 
 export function useAuth() {
   const [userId, setUserId] = useState<string | null>(null)
   const [userName, setUserName] = useState<string>('')
   const [authLoading, setAuthLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
+    const supabase = createClient()
     supabase.auth.getSession().then(({ data }) => {
       setUserId(data.session?.user.id ?? null)
       setUserName(data.session?.user.user_metadata?.name ?? '')

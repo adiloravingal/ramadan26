@@ -5,12 +5,6 @@ export const metadata: Metadata = {
   title: 'Ramadan Tracker · Chennai 1446H',
   description: 'Track your prayers and fasts this Ramadan',
   manifest: '/manifest.json',
-  themeColor: '#070c1a',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'black-translucent',
-    title: 'Ramadan',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -22,19 +16,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Ramadan" />
-        <script defer src="https://cloud.umami.is/script.js" data-website-id="ba5c25a6-18a9-4ac7-b25e-35083592967e"></script>
+        {/* Init theme before paint — prevents flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var t = localStorage.getItem('theme') ||
+              (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+            document.documentElement.setAttribute('data-theme', t);
+          })();
+        `}} />
       </head>
       <body>
         {children}
-        <script dangerouslySetInnerHTML={{
-          __html: `
-            if ('serviceWorker' in navigator) {
-              window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-              })
-            }
-          `
-        }} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'))
+          }
+        `}} />
       </body>
     </html>
   )

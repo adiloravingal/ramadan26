@@ -48,7 +48,7 @@ export default function LoginPage() {
 
         .login-root {
           min-height: 100vh;
-          background: #0a0f1e;
+          background: var(--bg-root);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -136,7 +136,7 @@ export default function LoginPage() {
           font-family: 'Cormorant Garamond', serif;
           font-size: 36px;
           font-weight: 300;
-          color: #f0e6cc;
+          color: var(--text-primary);
           letter-spacing: 0.02em;
           line-height: 1.1;
         }
@@ -157,8 +157,8 @@ export default function LoginPage() {
         }
 
         .panel {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(196,155,74,0.15);
+          background: var(--bg-panel);
+          border: 1px solid var(--border-gold);
           border-radius: 20px;
           padding: 32px;
           backdrop-filter: blur(20px);
@@ -171,8 +171,8 @@ export default function LoginPage() {
 
         .mode-toggle {
           display: flex;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: var(--bg-input);
+          border: 1px solid var(--border);
           border-radius: 12px;
           padding: 4px;
           margin-bottom: 28px;
@@ -231,10 +231,10 @@ export default function LoginPage() {
         .field input {
           width: 100%;
           padding: 13px 16px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: var(--bg-input);
+          border: 1px solid var(--border-input);
           border-radius: 12px;
-          color: #f0e6cc;
+          color: var(--text-primary);
           font-size: 14px;
           font-family: 'Lato', sans-serif;
           font-weight: 300;
@@ -242,7 +242,7 @@ export default function LoginPage() {
           transition: all 0.3s;
           -webkit-appearance: none;
         }
-        .field input::placeholder { color: rgba(255,255,255,0.2); }
+        .field input::placeholder { color: var(--text-placeholder); }
         .field input:focus {
           border-color: rgba(196,155,74,0.5);
           background: rgba(196,155,74,0.05);
@@ -250,7 +250,7 @@ export default function LoginPage() {
         }
         .field input:-webkit-autofill {
           -webkit-box-shadow: 0 0 0 100px #111827 inset !important;
-          -webkit-text-fill-color: #f0e6cc !important;
+          -webkit-text-fill-color: var(--text-primary) !important;
         }
 
         .error-msg {
@@ -301,7 +301,7 @@ export default function LoginPage() {
         .submit-btn .btn-shimmer {
           position: absolute;
           inset: 0;
-          background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+          background: linear-gradient(105deg, transparent 40%, var(--text-secondary) 50%, transparent 60%);
           transform: translateX(-100%);
           animation: shimmer 2.5s infinite;
         }

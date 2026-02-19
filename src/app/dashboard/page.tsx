@@ -6,13 +6,16 @@ import { useAuth, useRamadanData } from '@/lib/hooks'
 import Link from 'next/link'
 import { DayStatus, QazaSummary } from '@/types'
 import { dayCalendarStatus } from '@/lib/prayerUtils'
+import ThemeToggle from '@/components/ThemeToggle'
+import LocationSetup from '@/components/LocationSetup'
+import { createClient } from '@/lib/supabase'
 
 const PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const
 type PrayerKey = typeof PRAYERS[number] | 'fast'
 
 export default function DashboardPage() {
   const { userId, userName, authLoading, signOut } = useAuth()
-  const { dayStatuses, qaza, config, loading, togglePrayer } = useRamadanData(userId)
+  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [expandedQaza, setExpandedQaza] = useState<PrayerKey | null>(null)
@@ -40,13 +43,17 @@ export default function DashboardPage() {
 
   if (authLoading || loading) return <LoadingScreen />
 
+  if (needsLocation && userId) {
+  return <LocationSetup userId={userId} onComplete={onLocationSet} />
+}
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Lato:wght@300;400;700&display=swap');
         * { box-sizing: border-box; }
 
-        .db { min-height: 100vh; background: #070c1a; font-family: 'Lato', sans-serif; color: #f0e6cc; padding-bottom: 60px; }
+        .db { min-height: 100vh; background: var(--bg-root); font-family: 'Lato', sans-serif; color: var(--text-primary); padding-bottom: 60px; }
 
         /* Header */
         .hdr { display:flex; align-items:center; justify-content:space-between; padding:18px 20px; border-bottom:1px solid rgba(196,155,74,0.1); background:rgba(7,12,26,0.95); backdrop-filter:blur(20px); position:sticky; top:0; z-index:100; }
@@ -79,13 +86,13 @@ export default function DashboardPage() {
         .tc-fast.missed { background:rgba(248,113,113,0.09); color:#fca5a5; border:1px solid rgba(248,113,113,0.18); }
         .progress-bar { margin-top:18px; }
         .progress-lbl { display:flex; justify-content:space-between; font-size:10px; color:rgba(255,255,255,0.25); margin-bottom:7px; }
-        .progress-track { height:3px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+        .progress-track { height:3px; background:var(--border); border-radius:3px; overflow:hidden; }
         .progress-fill { height:100%; background:linear-gradient(90deg,#c49b4a,#e8c97a); border-radius:3px; transition:width 1.2s cubic-bezier(0.16,1,0.3,1) 0.4s; box-shadow:0 0 8px rgba(196,155,74,0.4); }
 
         /* TODAY PRAYER TOGGLES */
         .today-prayers { margin-top:14px; display:flex; flex-direction:column; gap:7px; }
-        .tp-row { display:flex; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,0.04); background:rgba(255,255,255,0.02); transition:all 0.2s; cursor:pointer; user-select:none; position:relative; overflow:hidden; }
-        .tp-row:hover { border-color:rgba(196,155,74,0.15); }
+        .tp-row { display:flex; align-items:center; padding:12px 14px; border-radius:14px; border:1px solid var(--bg-input); background:rgba(255,255,255,0.02); transition:all 0.2s; cursor:pointer; user-select:none; position:relative; overflow:hidden; }
+        .tp-row:hover { border-color:var(--border-gold); }
         .tp-row.done { background:rgba(52,211,153,0.06); border-color:rgba(52,211,153,0.14); }
         .tp-row.missed { background:rgba(248,113,113,0.04); border-color:rgba(248,113,113,0.1); }
         .tp-celebrate { position:absolute; inset:0; background:radial-gradient(circle at center, rgba(52,211,153,0.25), transparent 70%); animation:celebPulse 0.7s ease-out forwards; pointer-events:none; }
@@ -94,7 +101,7 @@ export default function DashboardPage() {
         .tp-info { flex:1; padding:0 10px; }
         .tp-name { font-size:13px; color:#f0e6cc; display:flex; align-items:center; gap:7px; }
         .tp-arabic { font-size:12px; color:rgba(196,155,74,0.35); font-family:serif; }
-        .tp-time { font-size:10px; color:rgba(255,255,255,0.22); margin-top:2px; }
+        .tp-time { font-size:10px; color:var(--text-muted); margin-top:2px; }
         .tp-time .qtag { color:#f87171; margin-left:5px; }
         .tgl { width:44px; height:24px; border-radius:12px; position:relative; border:none; cursor:pointer; transition:background 0.25s; flex-shrink:0; }
         .tgl.off { background:rgba(255,255,255,0.07); }
@@ -120,24 +127,24 @@ export default function DashboardPage() {
 
         /* Expanded days list */
         .qaza-days { border-top:1px solid rgba(248,113,113,0.1); }
-        .qaza-day-row { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid rgba(255,255,255,0.03); transition:background 0.15s; cursor:pointer; }
+        .qaza-day-row { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; border-bottom:1px solid var(--bg-panel); transition:background 0.15s; cursor:pointer; }
         .qaza-day-row:last-child { border-bottom:none; }
         .qaza-day-row:hover { background:rgba(255,255,255,0.02); }
         .qaza-day-row.done { background:rgba(52,211,153,0.04); }
         .qd-info { display:flex; flex-direction:column; gap:2px; }
         .qd-day { font-size:12px; color:#f0e6cc; }
-        .qd-date { font-size:10px; color:rgba(255,255,255,0.22); }
+        .qd-date { font-size:10px; color:var(--text-muted); }
         .qd-celebrate { position:absolute; inset:0; background:radial-gradient(circle at center, rgba(52,211,153,0.3), transparent 70%); animation:celebPulse 0.7s ease-out forwards; pointer-events:none; }
 
         /* DATE PICKER */
-        .dp-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; display:flex; align-items:flex-end; justify-content:center; animation:fadeIn 0.2s; }
+        .dp-overlay { position:fixed; inset:0; background:var(--overlay); z-index:200; display:flex; align-items:flex-end; justify-content:center; animation:fadeIn 0.2s; }
         @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
-        .dp-sheet { background:#0e1628; border:1px solid rgba(196,155,74,0.15); border-radius:24px 24px 0 0; width:100%; max-width:480px; max-height:70vh; overflow:hidden; display:flex; flex-direction:column; animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1); }
+        .dp-sheet { background:#0e1628; border:1px solid var(--border-gold); border-radius:24px 24px 0 0; width:100%; max-width:480px; max-height:70vh; overflow:hidden; display:flex; flex-direction:column; animation:slideUp 0.3s cubic-bezier(0.16,1,0.3,1); }
         @keyframes slideUp { from{transform:translateY(100%);} to{transform:translateY(0);} }
         .dp-handle { width:36px; height:4px; background:rgba(255,255,255,0.12); border-radius:2px; margin:12px auto 16px; }
         .dp-title { font-family:'Cormorant Garamond',serif; font-size:18px; color:#e8c97a; text-align:center; margin-bottom:16px; }
         .dp-list { overflow-y:auto; padding:0 16px 24px; display:flex; flex-direction:column; gap:6px; }
-        .dp-row { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-radius:14px; background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.05); text-decoration:none; transition:all 0.2s; }
+        .dp-row { display:flex; align-items:center; justify-content:space-between; padding:13px 16px; border-radius:14px; background:var(--bg-card); border:1px solid rgba(255,255,255,0.05); text-decoration:none; transition:all 0.2s; }
         .dp-row:hover { border-color:rgba(196,155,74,0.2); background:rgba(196,155,74,0.05); }
         .dp-row.is-today { border-color:rgba(196,155,74,0.3); box-shadow:0 0 12px rgba(196,155,74,0.1); }
         .dp-left { display:flex; align-items:center; gap:10px; }
@@ -147,7 +154,7 @@ export default function DashboardPage() {
         .dp-dot { width:6px; height:6px; border-radius:50%; }
 
         /* Date picker button */
-        .dp-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; background:rgba(255,255,255,0.03); border:1px solid rgba(196,155,74,0.12); border-radius:14px; color:rgba(196,155,74,0.6); font-size:12px; font-family:'Lato',sans-serif; letter-spacing:0.1em; cursor:pointer; transition:all 0.2s; margin-top:8px; }
+        .dp-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; background:var(--bg-panel); border:1px solid rgba(196,155,74,0.12); border-radius:14px; color:rgba(196,155,74,0.6); font-size:12px; font-family:'Lato',sans-serif; letter-spacing:0.1em; cursor:pointer; transition:all 0.2s; margin-top:8px; }
         .dp-btn:hover { background:rgba(196,155,74,0.06); border-color:rgba(196,155,74,0.25); color:#e8c97a; }
       `}</style>
 
@@ -163,7 +170,21 @@ export default function DashboardPage() {
               <div className="hdr-sub">Assalamu Alaikum, {userName || 'Friend'}</div>
             </div>
           </div>
-          <button className="hdr-out" onClick={signOut}>Sign out</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+  <ThemeToggle />
+  <button
+    className="hdr-out"
+    onClick={async () => {
+      const supabase = createClient()
+      await supabase.from('user_prayer_times').delete().eq('user_id', userId)
+      window.location.reload()
+    }}
+    title="Change location"
+  >
+    📍
+  </button>
+  <button className="hdr-out" onClick={signOut}>Sign out</button>
+</div>
         </header>
 
         <main className="main">

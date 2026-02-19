@@ -9,7 +9,7 @@ import Link from 'next/link'
 
 export default function DashboardPage() {
   const { userId, userName, authLoading, signOut } = useAuth()
-  const { dayStatuses, qaza, config, loading } = useRamadanData(userId)
+  const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer } = useRamadanData(userId)
   const router = useRouter()
 
   useEffect(() => {

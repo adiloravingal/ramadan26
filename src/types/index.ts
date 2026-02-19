@@ -1,7 +1,8 @@
 export type Prayer = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha'
 
 export interface PrayerTime {
-  id: number
+  id: string
+  user_id: string
   day_number: number
   date: string
   fajr_end: string
@@ -31,10 +32,13 @@ export interface RamadanConfig {
   start_date: string
 }
 
-export interface User {
+export interface UserSettings {
   id: string
-  email: string
-  name: string
+  city_name: string
+  latitude: number
+  longitude: number
+  timezone: string
+  updated_at: string
 }
 
 export interface QazaSummary {
