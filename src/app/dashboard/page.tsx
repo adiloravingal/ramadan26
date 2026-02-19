@@ -253,9 +253,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div>
-      <Link href="razorpay.me/@adiloravingal">Donate</Link>
-    </div>
+            <form><script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_SI7XUGQIouD3OK" async> </script> </form>
             <ThemeToggle />
 
             <button
