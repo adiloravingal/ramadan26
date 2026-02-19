@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [expandedQaza, setExpandedQaza] = useState<PrayerKey | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [celebrating, setCelebrating] = useState<string | null>(null)
+  const [forceLocationSetup, setForceLocationSetup] = useState(false)
 
   useEffect(() => { if (!authLoading && !userId) router.push('/login') }, [authLoading, userId])
   useEffect(() => { if (!loading) setTimeout(() => setMounted(true), 80) }, [loading])
@@ -160,18 +161,20 @@ export default function DashboardPage() {
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
             <ThemeToggle />
             <button
-              className="hdr-out"
-              title="Change location"
-              onClick={async () => {
-                if (!userId) return
-                const supabase = createClient()
-                await supabase.from('user_prayer_times').delete().eq('user_id', userId)
-                await supabase.from('user_settings').delete().eq('id', userId)
-                window.location.href = '/dashboard'
-              }}
-            >
-              📍
-            </button>
+  className="hdr-out"
+  title="Change location"
+  onClick={async () => {
+    if (!userId) return
+    const supabase = createClient()
+    await Promise.all([
+      supabase.from('user_prayer_times').delete().eq('user_id', userId),
+      supabase.from('user_settings').delete().eq('id', userId)
+    ])
+    setForceLocationSetup(true)
+  }}
+>
+  📍
+</button>
             <button className="hdr-out" onClick={signOut}>Sign out</button>
           </div>
         </header>
