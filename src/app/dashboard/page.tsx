@@ -1,102 +1,125 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth, useRamadanData } from '@/lib/hooks'
-import Link from 'next/link'
-import { DayStatus, QazaSummary } from '@/types'
-import { dayCalendarStatus } from '@/lib/prayerUtils'
-import ThemeToggle from '@/components/ThemeToggle'
-import LocationSetup from '@/components/LocationSetup'
-import { createClient } from '@/lib/supabase'
-import Onboarding from '@/components/Onboarding'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth, useRamadanData } from "@/lib/hooks";
+import Link from "next/link";
+import { DayStatus, QazaSummary } from "@/types";
+import { dayCalendarStatus } from "@/lib/prayerUtils";
+import ThemeToggle from "@/components/ThemeToggle";
+import LocationSetup from "@/components/LocationSetup";
+import { createClient } from "@/lib/supabase";
+import Onboarding from "@/components/Onboarding";
 
-const PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const
-type PrayerKey = typeof PRAYERS[number] | 'fast'
+const PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
+type PrayerKey = (typeof PRAYERS)[number] | "fast";
 
 export default function DashboardPage() {
-  const { userId, userName, authLoading, signOut } = useAuth()
-const { dayStatuses, qaza, config, loading, needsLocation, onLocationSet, togglePrayer, settings } = useRamadanData(userId) 
-const router = useRouter()
-  const [mounted, setMounted] = useState(false)
-  const [expandedQaza, setExpandedQaza] = useState<PrayerKey | null>(null)
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [celebrating, setCelebrating] = useState<string | null>(null)
-  const [forceLocationSetup, setForceLocationSetup] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  const { userId, userName, authLoading, signOut } = useAuth();
+  const {
+    dayStatuses,
+    qaza,
+    config,
+    loading,
+    needsLocation,
+    onLocationSet,
+    togglePrayer,
+    settings,
+  } = useRamadanData(userId);
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const [expandedQaza, setExpandedQaza] = useState<PrayerKey | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [celebrating, setCelebrating] = useState<string | null>(null);
+  const [forceLocationSetup, setForceLocationSetup] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-useEffect(() => {
-  if (!authLoading && userId && !loading) {
-    const done = localStorage.getItem('onboarding_done')
-    if (!done) setShowOnboarding(true)
-  }
-}, [authLoading, userId, loading])
-
-  useEffect(() => { if (!authLoading && !userId) router.push('/login') }, [authLoading, userId])
-  useEffect(() => { if (!loading) setTimeout(() => setMounted(true), 80) }, [loading])
-
-  const today = dayStatuses.find(d => d.isToday)
-  const todayDone = today ? PRAYERS.filter(p => today.prayers[p] === 'done').length : 0
-
-  const handleToggle = async (key: PrayerKey, dayNumber: number, date: string, currentDone: boolean) => {
-    await togglePrayer(dayNumber, date, key, currentDone)
-    if (!currentDone) {
-      setCelebrating(`${dayNumber}-${key}`)
-      setTimeout(() => setCelebrating(null), 800)
+  useEffect(() => {
+    if (!authLoading && userId && !loading) {
+      const done = localStorage.getItem("onboarding_done");
+      if (!done) setShowOnboarding(true);
     }
-  }
+  }, [authLoading, userId, loading]);
 
-  if (authLoading || loading) return <LoadingScreen />
+  useEffect(() => {
+    if (!authLoading && !userId) router.push("/login");
+  }, [authLoading, userId]);
+  useEffect(() => {
+    if (!loading) setTimeout(() => setMounted(true), 80);
+  }, [loading]);
+
+  const today = dayStatuses.find((d) => d.isToday);
+  const todayDone = today
+    ? PRAYERS.filter((p) => today.prayers[p] === "done").length
+    : 0;
+
+  const handleToggle = async (
+    key: PrayerKey,
+    dayNumber: number,
+    date: string,
+    currentDone: boolean,
+  ) => {
+    await togglePrayer(dayNumber, date, key, currentDone);
+    if (!currentDone) {
+      setCelebrating(`${dayNumber}-${key}`);
+      setTimeout(() => setCelebrating(null), 800);
+    }
+  };
+
+  if (authLoading || loading) return <LoadingScreen />;
 
   if (showOnboarding) {
-  return (
-    <Onboarding
-      userName={userName}
-      totalDays={config?.total_days ?? 30}
-      startDate={config?.start_date ?? '2026-02-19'}
-      onComplete={async (missedMap) => {
-        setShowOnboarding(false)
-        if (!missedMap || !userId || !config) return
+    return (
+      <Onboarding
+        userName={userName}
+        totalDays={config?.total_days ?? 30}
+        startDate={config?.start_date ?? "2026-02-19"}
+        onComplete={async (missedMap) => {
+          setShowOnboarding(false);
+          if (!missedMap || !userId || !config) return;
 
-        const supabase = createClient()
-        const pastDays = Object.keys(missedMap).map(Number)
+          const supabase = createClient();
+          const pastDays = Object.keys(missedMap).map(Number);
 
-        for (const dayNum of pastDays) {
-          const missedPrayers = missedMap[dayNum] ?? []
-          const start = new Date(config.start_date + 'T00:00:00')
-          start.setDate(start.getDate() + dayNum - 1)
-          const dateStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`
+          for (const dayNum of pastDays) {
+            const missedPrayers = missedMap[dayNum] ?? [];
+            const start = new Date(config.start_date + "T00:00:00");
+            start.setDate(start.getDate() + dayNum - 1);
+            const dateStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
 
-          await supabase.from('day_records').upsert({
-            user_id: userId,
-            day_number: dayNum,
-            date: dateStr,
-            fajr: !missedPrayers.includes('fajr'),
-            dhuhr: !missedPrayers.includes('dhuhr'),
-            asr: !missedPrayers.includes('asr'),
-            maghrib: !missedPrayers.includes('maghrib'),
-            isha: !missedPrayers.includes('isha'),
-            fast: !missedPrayers.includes('fast'),
-          }, { onConflict: 'user_id,day_number' })
-        }
+            await supabase.from("day_records").upsert(
+              {
+                user_id: userId,
+                day_number: dayNum,
+                date: dateStr,
+                fajr: !missedPrayers.includes("fajr"),
+                dhuhr: !missedPrayers.includes("dhuhr"),
+                asr: !missedPrayers.includes("asr"),
+                maghrib: !missedPrayers.includes("maghrib"),
+                isha: !missedPrayers.includes("isha"),
+                fast: !missedPrayers.includes("fast"),
+              },
+              { onConflict: "user_id,day_number" },
+            );
+          }
 
-        //fetchData()
-      }}
-    />
-  )
-}
+          //fetchData()
+        }}
+      />
+    );
+  }
 
   if ((needsLocation || forceLocationSetup) && userId) {
-  return (
-    <LocationSetup
-      userId={userId}
-      onComplete={(settings) => {
-        setForceLocationSetup(false)
-        onLocationSet(settings)
-      }}
-    />
-  )
-}
+    return (
+      <LocationSetup
+        userId={userId}
+        onComplete={(settings) => {
+          setForceLocationSetup(false);
+          onLocationSet(settings);
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -204,112 +227,208 @@ useEffect(() => {
         <header className="hdr">
           <div className="hdr-left">
             <svg className="hdr-moon" viewBox="0 0 32 32" fill="none">
-              <path d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12c2.085 0 4.044-.533 5.75-1.47C17.43 25.849 14 21.84 14 17c0-4.84 3.43-8.849 7.75-9.53A11.95 11.95 0 0016 4z" fill="url(#hg)"/>
-              <defs><linearGradient id="hg" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop stopColor="#e8c97a"/><stop offset="1" stopColor="#c49b4a"/></linearGradient></defs>
+              <path
+                d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12c2.085 0 4.044-.533 5.75-1.47C17.43 25.849 14 21.84 14 17c0-4.84 3.43-8.849 7.75-9.53A11.95 11.95 0 0016 4z"
+                fill="url(#hg)"
+              />
+              <defs>
+                <linearGradient
+                  id="hg"
+                  x1="4"
+                  y1="4"
+                  x2="28"
+                  y2="28"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop stopColor="#e8c97a" />
+                  <stop offset="1" stopColor="#c49b4a" />
+                </linearGradient>
+              </defs>
             </svg>
             <div>
               <div className="hdr-name">Ramadan Tracker</div>
-              <div className="hdr-sub">Assalamu Alaikum, {userName || 'Friend'}</div>
+              <div className="hdr-sub">
+                Assalamu Alaikum, {userName || "Friend"}
+              </div>
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemeToggle />
+            <a href="razorpay.me/@adiloravingal"/> Donate 
             <button
-  className="hdr-out"
-  title={settings?.city_name ? `Location: ${settings.city_name}` : 'Set location'}
-  onClick={async () => {
-    if (!userId) return
-    const supabase = createClient()
-    await Promise.all([
-      supabase.from('user_prayer_times').delete().eq('user_id', userId),
-      supabase.from('user_settings').delete().eq('id', userId)
-    ])
-    setForceLocationSetup(true)
-  }}
->
-  📍 {settings?.city_name ?? ''}
-</button>
-            <button className="hdr-out" onClick={signOut}>Sign out</button>
+              className="hdr-out"
+              title={
+                settings?.city_name
+                  ? `Location: ${settings.city_name}`
+                  : "Set location"
+              }
+              onClick={async () => {
+                if (!userId) return;
+                const supabase = createClient();
+                await Promise.all([
+                  supabase
+                    .from("user_prayer_times")
+                    .delete()
+                    .eq("user_id", userId),
+                  supabase.from("user_settings").delete().eq("id", userId),
+                ]);
+                setForceLocationSetup(true);
+              }}
+            >
+              📍 {settings?.city_name ?? ""}
+            </button>
+            <button className="hdr-out" onClick={signOut}>
+              Sign out
+            </button>
           </div>
         </header>
 
         <main className="main">
-
           {today && (
-            <div className={`fu ${mounted ? 'show' : ''}`} style={{ transitionDelay:'0.05s' }}>
+            <div
+              className={`fu ${mounted ? "show" : ""}`}
+              style={{ transitionDelay: "0.05s" }}
+            >
               <div className="slbl">Today</div>
               <div className="today-card">
                 <div className="tc-label">Ramadan 1446H</div>
-                <div className="tc-day">Day {today.dayNumber}<span>of {config?.total_days ?? 30}</span></div>
+                <div className="tc-day">
+                  Day {today.dayNumber}
+                  <span>of {config?.total_days ?? 30}</span>
+                </div>
                 <div className="tc-date">{formatDate(today.date)}</div>
                 <div className={`tc-fast ${today.fast}`}>
-                  {today.fast === 'done' ? '✓ Fasting' : today.fast === 'missed' ? 'Fast missed' : 'Fasting'}
+                  {today.fast === "done"
+                    ? "✓ Fasting"
+                    : today.fast === "missed"
+                      ? "Fast missed"
+                      : "Fasting"}
                 </div>
                 <div className="progress-bar">
-                  <div className="progress-lbl"><span>Prayers</span><span>{todayDone}/5</span></div>
+                  <div className="progress-lbl">
+                    <span>Prayers</span>
+                    <span>{todayDone}/5</span>
+                  </div>
                   <div className="progress-track">
-                    <div className="progress-fill" style={{ width: mounted ? `${(todayDone/5)*100}%` : '0%' }} />
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: mounted ? `${(todayDone / 5) * 100}%` : "0%",
+                      }}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="today-prayers">
                 {PRAYERS.map((key, i) => {
-                  const status = today.prayers[key]
-                  const isDone = status === 'done'
-                  const isMissed = status === 'missed'
-                  const celebKey = `${today.dayNumber}-${key}`
+                  const status = today.prayers[key];
+                  const isDone = status === "done";
+                  const isMissed = status === "missed";
+                  const celebKey = `${today.dayNumber}-${key}`;
                   return (
                     <div
                       key={key}
-                      className={`tp-row ${isDone ? 'done' : isMissed ? 'missed' : ''} fu ${mounted ? 'show' : ''}`}
-                      style={{ transitionDelay:`${0.12 + i * 0.05}s` }}
-                      onClick={() => handleToggle(key, today.dayNumber, today.date, isDone)}
+                      className={`tp-row ${isDone ? "done" : isMissed ? "missed" : ""} fu ${mounted ? "show" : ""}`}
+                      style={{ transitionDelay: `${0.12 + i * 0.05}s` }}
+                      onClick={() =>
+                        handleToggle(key, today.dayNumber, today.date, isDone)
+                      }
                     >
-                      {celebrating === celebKey && <div className="tp-celebrate" />}
+                      {celebrating === celebKey && (
+                        <div className="tp-celebrate" />
+                      )}
                       <div className="tp-icon">{PRAYER_ICONS[key]}</div>
                       <div className="tp-info">
-                        <div className="tp-name">{capitalize(key)}<span className="tp-arabic">{PRAYER_ARABIC[key]}</span></div>
+                        <div className="tp-name">
+                          {capitalize(key)}
+                          <span className="tp-arabic">
+                            {PRAYER_ARABIC[key]}
+                          </span>
+                        </div>
                         <div className="tp-time">
-                          ends {formatTime(today.prayerTime[`${key}_end` as keyof typeof today.prayerTime] as string)}
+                          ends{" "}
+                          {formatTime(
+                            today.prayerTime[
+                              `${key}_end` as keyof typeof today.prayerTime
+                            ] as string,
+                          )}
                           {isMissed && <span className="qtag">· Qaza</span>}
                         </div>
                       </div>
-                      <button className={`tgl ${isDone ? 'on' : 'off'}`} onClick={e => { e.stopPropagation(); handleToggle(key, today.dayNumber, today.date, isDone) }}>
+                      <button
+                        className={`tgl ${isDone ? "on" : "off"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggle(
+                            key,
+                            today.dayNumber,
+                            today.date,
+                            isDone,
+                          );
+                        }}
+                      >
                         <div className="tgl-k" />
                       </button>
                     </div>
-                  )
+                  );
                 })}
 
                 {(() => {
-                  const isDone = today.fast === 'done'
-                  const isMissed = today.fast === 'missed'
-                  const celebKey = `${today.dayNumber}-fast`
+                  const isDone = today.fast === "done";
+                  const isMissed = today.fast === "missed";
+                  const celebKey = `${today.dayNumber}-fast`;
                   return (
                     <div
-                      className={`tp-row ${isDone ? 'done' : isMissed ? 'missed' : ''} fu ${mounted ? 'show' : ''}`}
-                      style={{ transitionDelay:'0.37s' }}
-                      onClick={() => handleToggle('fast', today.dayNumber, today.date, isDone)}
+                      className={`tp-row ${isDone ? "done" : isMissed ? "missed" : ""} fu ${mounted ? "show" : ""}`}
+                      style={{ transitionDelay: "0.37s" }}
+                      onClick={() =>
+                        handleToggle(
+                          "fast",
+                          today.dayNumber,
+                          today.date,
+                          isDone,
+                        )
+                      }
                     >
-                      {celebrating === celebKey && <div className="tp-celebrate" />}
+                      {celebrating === celebKey && (
+                        <div className="tp-celebrate" />
+                      )}
                       <div className="tp-icon">🌙</div>
                       <div className="tp-info">
-                        <div className="tp-name">Fasting<span className="tp-arabic">صوم</span></div>
-                        <div className="tp-time">after Isha · {formatTime(today.prayerTime.isha_end)}</div>
+                        <div className="tp-name">
+                          Fasting<span className="tp-arabic">صوم</span>
+                        </div>
+                        <div className="tp-time">
+                          after Isha · {formatTime(today.prayerTime.isha_end)}
+                        </div>
                       </div>
-                      <button className={`tgl ${isDone ? 'on' : 'off'}`} onClick={e => { e.stopPropagation(); handleToggle('fast', today.dayNumber, today.date, isDone) }}>
+                      <button
+                        className={`tgl ${isDone ? "on" : "off"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggle(
+                            "fast",
+                            today.dayNumber,
+                            today.date,
+                            isDone,
+                          );
+                        }}
+                      >
                         <div className="tgl-k" />
                       </button>
                     </div>
-                  )
+                  );
                 })()}
               </div>
             </div>
           )}
 
           {qaza && (
-            <div className={`fu ${mounted ? 'show' : ''}`} style={{ transitionDelay:'0.2s' }}>
+            <div
+              className={`fu ${mounted ? "show" : ""}`}
+              style={{ transitionDelay: "0.2s" }}
+            >
               <div className="slbl">Qaza</div>
               <QazaSection
                 qaza={qaza}
@@ -322,12 +441,14 @@ useEffect(() => {
             </div>
           )}
 
-          <div className={`fu ${mounted ? 'show' : ''}`} style={{ transitionDelay:'0.3s' }}>
+          <div
+            className={`fu ${mounted ? "show" : ""}`}
+            style={{ transitionDelay: "0.3s" }}
+          >
             <button className="dp-btn" onClick={() => setShowDatePicker(true)}>
               <span>☽</span> Browse All Days
             </button>
           </div>
-
         </main>
       </div>
 
@@ -338,169 +459,314 @@ useEffect(() => {
         />
       )}
     </>
-  )
+  );
 }
 
-function QazaSection({ qaza, dayStatuses, expandedQaza, setExpandedQaza, celebrating, onToggle }: {
-  qaza: QazaSummary
-  dayStatuses: DayStatus[]
-  expandedQaza: PrayerKey | null
-  setExpandedQaza: (k: PrayerKey | null) => void
-  celebrating: string | null
-  onToggle: (key: PrayerKey, dayNumber: number, date: string, currentDone: boolean) => void
+function QazaSection({
+  qaza,
+  dayStatuses,
+  expandedQaza,
+  setExpandedQaza,
+  celebrating,
+  onToggle,
+}: {
+  qaza: QazaSummary;
+  dayStatuses: DayStatus[];
+  expandedQaza: PrayerKey | null;
+  setExpandedQaza: (k: PrayerKey | null) => void;
+  celebrating: string | null;
+  onToggle: (
+    key: PrayerKey,
+    dayNumber: number,
+    date: string,
+    currentDone: boolean,
+  ) => void;
 }) {
-  const totalMissed = qaza.total_prayers + qaza.fast
+  const totalMissed = qaza.total_prayers + qaza.fast;
   if (totalMissed === 0) {
     return (
       <div className="qaza-wrap">
         <div className="all-clear">
-          <span style={{ fontSize:18 }}>✦</span>
+          <span style={{ fontSize: 18 }}>✦</span>
           <span>All prayers and fasts are complete — MashaAllah!</span>
         </div>
       </div>
-    )
+    );
   }
 
   const allItems = [
-    { key: 'fajr'    as PrayerKey, label:'Fajr',    arabic:'الفجر', icon:'🌙', count:qaza.fajr },
-    { key: 'dhuhr'   as PrayerKey, label:'Dhuhr',   arabic:'الظهر', icon:'☀️', count:qaza.dhuhr },
-    { key: 'asr'     as PrayerKey, label:'Asr',     arabic:'العصر', icon:'🌤', count:qaza.asr },
-    { key: 'maghrib' as PrayerKey, label:'Maghrib', arabic:'المغرب', icon:'🌅', count:qaza.maghrib },
-    { key: 'isha'    as PrayerKey, label:'Isha',    arabic:'العشاء', icon:'✨', count:qaza.isha },
-    { key: 'fast'    as PrayerKey, label:'Fasting', arabic:'صوم',   icon:'🌙', count:qaza.fast },
-  ]
-  const items = allItems.filter(i => i.count > 0)
+    {
+      key: "fajr" as PrayerKey,
+      label: "Fajr",
+      arabic: "الفجر",
+      icon: "🌙",
+      count: qaza.fajr,
+    },
+    {
+      key: "dhuhr" as PrayerKey,
+      label: "Dhuhr",
+      arabic: "الظهر",
+      icon: "☀️",
+      count: qaza.dhuhr,
+    },
+    {
+      key: "asr" as PrayerKey,
+      label: "Asr",
+      arabic: "العصر",
+      icon: "🌤",
+      count: qaza.asr,
+    },
+    {
+      key: "maghrib" as PrayerKey,
+      label: "Maghrib",
+      arabic: "المغرب",
+      icon: "🌅",
+      count: qaza.maghrib,
+    },
+    {
+      key: "isha" as PrayerKey,
+      label: "Isha",
+      arabic: "العشاء",
+      icon: "✨",
+      count: qaza.isha,
+    },
+    {
+      key: "fast" as PrayerKey,
+      label: "Fasting",
+      arabic: "صوم",
+      icon: "🌙",
+      count: qaza.fast,
+    },
+  ];
+  const items = allItems.filter((i) => i.count > 0);
 
   return (
     <div className="qaza-wrap">
-      {items.map(item => {
-        const isOpen = expandedQaza === item.key
-        const missedDays = dayStatuses.filter(d =>
-          item.key === 'fast'
-            ? d.fast === 'missed'
-            : d.prayers[item.key as typeof PRAYERS[number]] === 'missed'
-        )
+      {items.map((item) => {
+        const isOpen = expandedQaza === item.key;
+        const missedDays = dayStatuses.filter((d) =>
+          item.key === "fast"
+            ? d.fast === "missed"
+            : d.prayers[item.key as (typeof PRAYERS)[number]] === "missed",
+        );
 
         return (
           <div key={item.key} className="qaza-item">
-            <div className="qaza-header" onClick={() => setExpandedQaza(isOpen ? null : item.key)}>
+            <div
+              className="qaza-header"
+              onClick={() => setExpandedQaza(isOpen ? null : item.key)}
+            >
               <div className="qaza-header-left">
                 <span className="qaza-icon">{item.icon}</span>
                 <span className="qaza-label">
-                  {item.label}<span className="qaza-arabic">{item.arabic}</span>
+                  {item.label}
+                  <span className="qaza-arabic">{item.arabic}</span>
                 </span>
               </div>
               <div className="qaza-count-badge">
                 <span>{item.count} missed</span>
-                <span className={`qaza-chevron ${isOpen ? 'open' : ''}`}>▼</span>
+                <span className={`qaza-chevron ${isOpen ? "open" : ""}`}>
+                  ▼
+                </span>
               </div>
             </div>
 
             {isOpen && (
               <div className="qaza-days">
-                {missedDays.map(day => {
-                  const isDone = item.key === 'fast'
-                    ? day.fast === 'done'
-                    : day.prayers[item.key as typeof PRAYERS[number]] === 'done'
-                  const celebKey = `${day.dayNumber}-${item.key}`
+                {missedDays.map((day) => {
+                  const isDone =
+                    item.key === "fast"
+                      ? day.fast === "done"
+                      : day.prayers[item.key as (typeof PRAYERS)[number]] ===
+                        "done";
+                  const celebKey = `${day.dayNumber}-${item.key}`;
                   return (
                     <div
                       key={day.dayNumber}
-                      className={`qaza-day-row ${isDone ? 'done' : ''}`}
-                      style={{ position:'relative' }}
-                      onClick={() => onToggle(item.key, day.dayNumber, day.date, isDone)}
+                      className={`qaza-day-row ${isDone ? "done" : ""}`}
+                      style={{ position: "relative" }}
+                      onClick={() =>
+                        onToggle(item.key, day.dayNumber, day.date, isDone)
+                      }
                     >
-                      {celebrating === celebKey && <div className="qd-celebrate" />}
+                      {celebrating === celebKey && (
+                        <div className="qd-celebrate" />
+                      )}
                       <div className="qd-info">
                         <div className="qd-day">Day {day.dayNumber}</div>
                         <div className="qd-date">{formatDate(day.date)}</div>
                       </div>
                       <button
-                        className={`tgl ${isDone ? 'on' : 'off'}`}
-                        onClick={e => { e.stopPropagation(); onToggle(item.key, day.dayNumber, day.date, isDone) }}
+                        className={`tgl ${isDone ? "on" : "off"}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggle(item.key, day.dayNumber, day.date, isDone);
+                        }}
                       >
                         <div className="tgl-k" />
                       </button>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
-function DatePickerSheet({ dayStatuses, onClose }: { dayStatuses: DayStatus[], onClose: () => void }) {
+function DatePickerSheet({
+  dayStatuses,
+  onClose,
+}: {
+  dayStatuses: DayStatus[];
+  onClose: () => void;
+}) {
   const getStatusDots = (day: DayStatus) => {
-    const prayers = ['fajr','dhuhr','asr','maghrib','isha'] as const
-    return prayers.map(p => {
-      const s = day.prayers[p]
-      return s === 'done' ? '#6ee7b7' : s === 'missed' ? '#f87171' : 'rgba(128,128,128,0.2)'
-    })
-  }
+    const prayers = ["fajr", "dhuhr", "asr", "maghrib", "isha"] as const;
+    return prayers.map((p) => {
+      const s = day.prayers[p];
+      return s === "done"
+        ? "#6ee7b7"
+        : s === "missed"
+          ? "#f87171"
+          : "rgba(128,128,128,0.2)";
+    });
+  };
 
   return (
     <div className="dp-overlay" onClick={onClose}>
-      <div className="dp-sheet" onClick={e => e.stopPropagation()}>
+      <div className="dp-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="dp-handle" />
         <div className="dp-title">Browse Days</div>
         <div className="dp-list">
-          {dayStatuses.map(day => {
-            const dots = getStatusDots(day)
+          {dayStatuses.map((day) => {
+            const dots = getStatusDots(day);
             return (
               <Link
                 key={day.dayNumber}
                 href={`/day/${day.dayNumber}`}
-                className={`dp-row ${day.isToday ? 'is-today' : ''}`}
+                className={`dp-row ${day.isToday ? "is-today" : ""}`}
                 onClick={onClose}
               >
                 <div className="dp-left">
                   <div className="dp-daynum">{day.dayNumber}</div>
                   <div>
-                    <div style={{ fontSize:12, color: day.isToday ? 'var(--text-gold)' : 'var(--text-primary)' }}>
-                      {day.isToday ? 'Today' : day.isFuture ? 'Upcoming' : `Day ${day.dayNumber}`}
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: day.isToday
+                          ? "var(--text-gold)"
+                          : "var(--text-primary)",
+                      }}
+                    >
+                      {day.isToday
+                        ? "Today"
+                        : day.isFuture
+                          ? "Upcoming"
+                          : `Day ${day.dayNumber}`}
                     </div>
                     <div className="dp-datestr">{formatDate(day.date)}</div>
                   </div>
                 </div>
                 <div className="dp-status">
                   {dots.map((color, i) => (
-                    <div key={i} className="dp-dot" style={{ background:color }} />
+                    <div
+                      key={i}
+                      className="dp-dot"
+                      style={{ background: color }}
+                    />
                   ))}
-                  <div className="dp-dot" style={{ background: day.fast === 'done' ? '#6ee7b7' : day.fast === 'missed' ? '#f87171' : 'rgba(128,128,128,0.2)', borderRadius:'3px' }} />
+                  <div
+                    className="dp-dot"
+                    style={{
+                      background:
+                        day.fast === "done"
+                          ? "#6ee7b7"
+                          : day.fast === "missed"
+                            ? "#f87171"
+                            : "rgba(128,128,128,0.2)",
+                      borderRadius: "3px",
+                    }}
+                  />
                 </div>
               </Link>
-            )
+            );
           })}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function LoadingScreen() {
   return (
-    <div style={{ minHeight:'100vh', background:'var(--bg-root)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
-      <svg style={{ width:36, height:36, filter:'drop-shadow(0 0 16px rgba(196,155,74,0.7))' }} viewBox="0 0 32 32" fill="none">
-        <path d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12c2.085 0 4.044-.533 5.75-1.47C17.43 25.849 14 21.84 14 17c0-4.84 3.43-8.849 7.75-9.53A11.95 11.95 0 0016 4z" fill="#c49b4a"/>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg-root)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <svg
+        style={{
+          width: 36,
+          height: 36,
+          filter: "drop-shadow(0 0 16px rgba(196,155,74,0.7))",
+        }}
+        viewBox="0 0 32 32"
+        fill="none"
+      >
+        <path
+          d="M16 4C9.373 4 4 9.373 4 16s5.373 12 12 12c2.085 0 4.044-.533 5.75-1.47C17.43 25.849 14 21.84 14 17c0-4.84 3.43-8.849 7.75-9.53A11.95 11.95 0 0016 4z"
+          fill="#c49b4a"
+        />
       </svg>
-      <div style={{ color:'rgba(196,155,74,0.5)', fontFamily:'serif', fontSize:13, letterSpacing:'0.15em' }}>Loading</div>
+      <div
+        style={{
+          color: "rgba(196,155,74,0.5)",
+          fontFamily: "serif",
+          fontSize: 13,
+          letterSpacing: "0.15em",
+        }}
+      >
+        Loading
+      </div>
     </div>
-  )
+  );
 }
 
-const PRAYER_ICONS: Record<string, string> = { fajr:'🌙', dhuhr:'☀️', asr:'🌤', maghrib:'🌅', isha:'✨' }
-const PRAYER_ARABIC: Record<string, string> = { fajr:'الفجر', dhuhr:'الظهر', asr:'العصر', maghrib:'المغرب', isha:'العشاء' }
-const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const PRAYER_ICONS: Record<string, string> = {
+  fajr: "🌙",
+  dhuhr: "☀️",
+  asr: "🌤",
+  maghrib: "🌅",
+  isha: "✨",
+};
+const PRAYER_ARABIC: Record<string, string> = {
+  fajr: "الفجر",
+  dhuhr: "الظهر",
+  asr: "العصر",
+  maghrib: "المغرب",
+  isha: "العشاء",
+};
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function formatDate(dateStr: string) {
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 function formatTime(t: string) {
-  const [h, m] = t.split(':').map(Number)
-  return `${h % 12 || 12}:${m.toString().padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'}`
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${m.toString().padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
