@@ -9,6 +9,7 @@ import { dayCalendarStatus } from '@/lib/prayerUtils'
 import ThemeToggle from '@/components/ThemeToggle'
 import LocationSetup from '@/components/LocationSetup'
 import { createClient } from '@/lib/supabase'
+import Onboarding from '@/components/Onboarding'
 
 const PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const
 type PrayerKey = typeof PRAYERS[number] | 'fast'
@@ -22,6 +23,14 @@ const router = useRouter()
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const [forceLocationSetup, setForceLocationSetup] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+useEffect(() => {
+  if (!authLoading && userId && !loading) {
+    const done = localStorage.getItem('onboarding_done')
+    if (!done) setShowOnboarding(true)
+  }
+}, [authLoading, userId, loading])
 
   useEffect(() => { if (!authLoading && !userId) router.push('/login') }, [authLoading, userId])
   useEffect(() => { if (!loading) setTimeout(() => setMounted(true), 80) }, [loading])
@@ -38,6 +47,44 @@ const router = useRouter()
   }
 
   if (authLoading || loading) return <LoadingScreen />
+
+  if (showOnboarding) {
+  return (
+    <Onboarding
+      userName={userName}
+      totalDays={config?.total_days ?? 30}
+      startDate={config?.start_date ?? '2026-02-19'}
+      onComplete={async (missedMap) => {
+        setShowOnboarding(false)
+        if (!missedMap || !userId || !config) return
+
+        const supabase = createClient()
+        const pastDays = Object.keys(missedMap).map(Number)
+
+        for (const dayNum of pastDays) {
+          const missedPrayers = missedMap[dayNum] ?? []
+          const start = new Date(config.start_date + 'T00:00:00')
+          start.setDate(start.getDate() + dayNum - 1)
+          const dateStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')}`
+
+          await supabase.from('day_records').upsert({
+            user_id: userId,
+            day_number: dayNum,
+            date: dateStr,
+            fajr: !missedPrayers.includes('fajr'),
+            dhuhr: !missedPrayers.includes('dhuhr'),
+            asr: !missedPrayers.includes('asr'),
+            maghrib: !missedPrayers.includes('maghrib'),
+            isha: !missedPrayers.includes('isha'),
+            fast: !missedPrayers.includes('fast'),
+          }, { onConflict: 'user_id,day_number' })
+        }
+
+        //fetchData()
+      }}
+    />
+  )
+}
 
   if ((needsLocation || forceLocationSetup) && userId) {
   return (
