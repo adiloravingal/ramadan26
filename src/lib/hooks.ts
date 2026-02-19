@@ -1,9 +1,21 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { buildDayStatus, computeQaza } from '@/lib/prayerUtils'
 import { DayRecord, DayStatus, PrayerTime, QazaSummary, RamadanConfig } from '@/types'
+
+function recomputeStatuses(
+  times: PrayerTime[],
+  records: DayRecord[],
+  totalDays: number
+): DayStatus[] {
+  const now = new Date()
+  return times.slice(0, totalDays).map(pt => {
+    const record = records.find(r => r.day_number === pt.day_number) ?? null
+    return buildDayStatus(pt.day_number, pt, record, now)
+  })
+}
 
 export function useRamadanData(userId: string | null) {
   const [config, setConfig] = useState<RamadanConfig | null>(null)
@@ -14,7 +26,18 @@ export function useRamadanData(userId: string | null) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const configRef = useRef<RamadanConfig | null>(null)
+  const prayerTimesRef = useRef<PrayerTime[]>([])
+
   const supabase = createClient()
+
+  // Whenever records change, recompute statuses + qaza immediately
+  const syncStatuses = useCallback((newRecords: DayRecord[]) => {
+    if (!configRef.current || prayerTimesRef.current.length === 0) return
+    const statuses = recomputeStatuses(prayerTimesRef.current, newRecords, configRef.current.total_days)
+    setDayStatuses(statuses)
+    setQaza(computeQaza(statuses))
+  }, [])
 
   const fetchData = useCallback(async () => {
     if (!userId) return
@@ -35,20 +58,13 @@ export function useRamadanData(userId: string | null) {
       const times = timesRes.data as PrayerTime[]
       const recs = recordsRes.data as DayRecord[]
 
+      configRef.current = cfg
+      prayerTimesRef.current = times
+
       setConfig(cfg)
       setPrayerTimes(times)
       setRecords(recs)
-
-      // Build day statuses for active days only
-      const activeTimes = times.slice(0, cfg.total_days)
-      const now = new Date()
-      const statuses = activeTimes.map(pt => {
-        const record = recs.find(r => r.day_number === pt.day_number) ?? null
-        return buildDayStatus(pt.day_number, pt, record, now)
-      })
-
-      setDayStatuses(statuses)
-      setQaza(computeQaza(statuses))
+      syncStatuses(recs)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -60,22 +76,16 @@ export function useRamadanData(userId: string | null) {
     fetchData()
   }, [fetchData])
 
-  // Refresh every 60s to auto-update missed status
+  // Refresh every 60s to catch newly-missed prayers automatically
   useEffect(() => {
     const interval = setInterval(() => {
-      if (prayerTimes.length && records !== undefined && config) {
-        const activeTimes = prayerTimes.slice(0, config.total_days)
-        const now = new Date()
-        const statuses = activeTimes.map(pt => {
-          const record = records.find(r => r.day_number === pt.day_number) ?? null
-          return buildDayStatus(pt.day_number, pt, record, now)
-        })
-        setDayStatuses(statuses)
-        setQaza(computeQaza(statuses))
-      }
+      setRecords(prev => {
+        syncStatuses(prev)
+        return prev
+      })
     }, 60_000)
     return () => clearInterval(interval)
-  }, [prayerTimes, records, config])
+  }, [syncStatuses])
 
   const togglePrayer = useCallback(async (
     dayNumber: number,
@@ -86,11 +96,14 @@ export function useRamadanData(userId: string | null) {
     if (!userId) return
     const newValue = !currentValue
 
-    // Optimistic update
+    // Optimistic update — immediately update records and recompute
     setRecords(prev => {
       const existing = prev.find(r => r.day_number === dayNumber)
+      let next: DayRecord[]
       if (existing) {
-        return prev.map(r => r.day_number === dayNumber ? { ...r, [field]: newValue } : r)
+        next = prev.map(r =>
+          r.day_number === dayNumber ? { ...r, [field]: newValue, updated_at: new Date().toISOString() } : r
+        )
       } else {
         const newRecord: DayRecord = {
           id: crypto.randomUUID(),
@@ -101,18 +114,26 @@ export function useRamadanData(userId: string | null) {
           [field]: newValue,
           updated_at: new Date().toISOString(),
         }
-        return [...prev, newRecord]
+        next = [...prev, newRecord]
       }
+      // Recompute synchronously inside the setter so UI updates in same render
+      syncStatuses(next)
+      return next
     })
 
-    // Upsert to Supabase
-    await supabase.from('day_records').upsert({
+    // Persist to Supabase in background
+    const { error } = await supabase.from('day_records').upsert({
       user_id: userId,
       day_number: dayNumber,
       date,
       [field]: newValue,
     }, { onConflict: 'user_id,day_number' })
-  }, [userId])
+
+    if (error) {
+      // Revert on failure
+      fetchData()
+    }
+  }, [userId, syncStatuses, fetchData])
 
   return { config, prayerTimes, dayStatuses, qaza, loading, error, refresh: fetchData, togglePrayer }
 }
@@ -138,7 +159,7 @@ export function useAuth() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const signOut = () => supabase.auth.signOut()
+  const signOut = () => createClient().auth.signOut()
 
   return { userId, userName, authLoading, signOut }
 }
