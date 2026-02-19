@@ -39,9 +39,9 @@ export default function DashboardPage() {
 
   if (authLoading || loading) return <LoadingScreen />
 
-  if (needsLocation && userId) {
-    return <LocationSetup userId={userId} onComplete={onLocationSet} />
-  }
+  if ((needsLocation || forceLocationSetup) && userId) {
+  return <LocationSetup userId={userId} onComplete={onLocationSet} />
+}
 
   return (
     <>
