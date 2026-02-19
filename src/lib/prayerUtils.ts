@@ -2,20 +2,18 @@ import { DayRecord, DayStatus, Prayer, PrayerTime, QazaSummary } from '@/types'
 
 const PRAYERS: Prayer[] = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha']
 
-/**
- * Given a date string "YYYY-MM-DD" and time "HH:MM",
- * returns a full Date object in local time.
- */
+function toLocalDateStr(date: Date): string {
+  // Use local date, not UTC — critical for IST (UTC+5:30)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export function toDateTime(date: string, time: string): Date {
   return new Date(`${date}T${time}:00`)
 }
 
-/**
- * Computes the status of each prayer and the fast for a given day.
- * - 'done'    → user marked it
- * - 'missed'  → time window passed and not marked (auto Qaza)
- * - 'pending' → time window not yet passed
- */
 export function computeDayStatus(
   prayerTime: PrayerTime,
   record: DayRecord | null,
@@ -42,7 +40,6 @@ export function computeDayStatus(
     }
   }
 
-  // Fast: evaluated after Isha end
   const fastDone = record?.fast ?? false
   let fast: DayStatus['fast']
   if (fastDone) {
@@ -56,17 +53,13 @@ export function computeDayStatus(
   return { ...prayers, fast }
 }
 
-/**
- * Builds a full DayStatus object for a given day.
- */
 export function buildDayStatus(
   dayNumber: number,
   prayerTime: PrayerTime,
   record: DayRecord | null,
   now: Date = new Date()
 ): DayStatus {
-  const dateObj = new Date(prayerTime.date + 'T00:00:00')
-  const todayStr = now.toISOString().split('T')[0]
+  const todayStr = toLocalDateStr(now)   // ← fixed: local date not UTC
   const isToday = prayerTime.date === todayStr
   const isPast = prayerTime.date < todayStr
   const isFuture = prayerTime.date > todayStr
@@ -87,9 +80,6 @@ export function buildDayStatus(
   }
 }
 
-/**
- * Computes total Qaza counts across all days.
- */
 export function computeQaza(dayStatuses: DayStatus[]): QazaSummary {
   const summary: QazaSummary = {
     fajr: 0, dhuhr: 0, asr: 0, maghrib: 0, isha: 0,
@@ -110,9 +100,6 @@ export function computeQaza(dayStatuses: DayStatus[]): QazaSummary {
   return summary
 }
 
-/**
- * Day-level summary for calendar display.
- */
 export function dayCalendarStatus(day: DayStatus): 'all-done' | 'partial' | 'missed' | 'pending' | 'future' {
   if (day.isFuture) return 'future'
 
