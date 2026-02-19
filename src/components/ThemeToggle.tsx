@@ -14,6 +14,9 @@ export default function ThemeToggle() {
     const next = isDark ? 'light' : 'dark'
     setTheme(next)
     setIsDark(!isDark)
+    // Update browser chrome color
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', next === 'light' ? '#F2EBD9' : '#070c1a')
   }
 
   return (
@@ -21,19 +24,19 @@ export default function ThemeToggle() {
       onClick={toggle}
       title="Toggle theme"
       style={{
-        background: 'none',
+        width: 34,
+        height: 34,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-card)',
         border: '1px solid var(--border-gold)',
-        borderRadius: '8px',
-        padding: '5px 9px',
+        borderRadius: '10px',
         cursor: 'pointer',
-        fontSize: '14px',
-        color: 'var(--text-gold-dim)',
+        fontSize: '15px',
         transition: 'all 0.2s',
-        fontFamily: 'Lato, sans-serif',
-        marginRight: '8px',
+        flexShrink: 0,
       }}
-      onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-gold)')}
-      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-gold-dim)')}
     >
       {isDark ? '☀️' : '🌙'}
     </button>
